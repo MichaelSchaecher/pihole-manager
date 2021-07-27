@@ -3,7 +3,7 @@
 # There is no need to set the name here, only the version code. However having
 # the name set helps with variables.
 export programName = pihole-manager
-export programVersion = 21.07-23-30
+export programVersion = 21.208-30
 
 # Set common hierarchy for the general build.
 export deb = DEBIAN/
