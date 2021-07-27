@@ -1,3 +1,10 @@
+pihole-manager (21.208-30) ubuntu; urgency=medium
+
+  * Typo in README.
+  * Add changelog from 'pihole-server-updater.'
+
+ -- Michael L. Schaecher <MichaelSchaecher@myangrytech.com>  Tue, 27 Jul 2021 08:28:56 -0600
+
 pihole-manager (21.07-23-31) ubuntu; urgency=medium
 
   * rewrote 'pihole-server-updater' and renamed to 'pihole-manager.'
@@ -6,3 +13,79 @@ pihole-manager (21.07-23-31) ubuntu; urgency=medium
   * Added log management systemctl timer.
 
  -- Michael L. Schaecher <MichaelSchaecher@myangrytech.com>  Mon, 26 Jul 2021 20:48:51 -0600
+
+pihole-server-updater (2131.07-23.15) ubuntu; urgency=medium
+
+  * Removed check for system reboot as this can be set with unattended-upgrades service.
+
+ -- Michael L. Schaecher <MichaelSchaecher@myangrytech.com>  Fri, 23 Jul 2021 09:18:43 -0600
+
+pihole-server-updater (2131.07-21.21) ubuntu; urgency=medium
+
+  * Modify how services are enable during install/upgrade.
+  * Edited discription for 'server-reboot' scripts.
+  * Fixed problem with script being stuck in loop cuase be missing 'break.'
+
+ -- Michael L. Schaecher <MichaelSchaecher@myangrytech.com>  Wed, 21 Jul 2021 11:23:48 -0600
+
+pihole-server-updater (2130.07-21.52) ubuntu; urgency=medium
+
+  * Moved check for required system reboot and added new systemd service for new reboot check.
+  * Changed how services scripts are copied.
+
+ -- Michael L. Schaecher <MichaelSchaecher@myangrytech.com>  Wed, 21 Jul 2021 09:23:36 -0600
+
+pihole-server-updater (2129.07-19.04) ubuntu; urgency=medium
+
+  * Add option to view log file.
+
+ -- Michael L. Schaecher <MichaelSchaecher@myangrytech.com>  Mon, 19 Jul 2021 04:36:28 -0600
+
+pihole-server-updater (2129.07-19.03) ubuntu; urgency=medium
+
+  * Removed missing command.
+  * Version bump.
+  * Add function check for updating Pi-hole and checking if service is up.
+
+ -- Michael L. Schaecher <MichaelSchaecher@myangrytech.com>  Mon, 19 Jul 2021 03:04:11 -0600
+
+pihole-server-updater (2129.07-10.27) ubuntu; urgency=medium
+
+  * Check if a new version is avialable using Pi-hole's build-in service.
+  * Oops.
+
+ -- Michael L. Schaecher <MichaelSchaecher@myangrytech.com>  Wed, 14 Jul 2021 10:42:45 -0600
+
+pihole-server-updater (2128.07-11.51) ubuntu; urgency=medium
+
+  * Fixed pihole-server-updater.service script that would cuased nothing to happen.
+  * Fixed dependency error when installing deb package.
+
+ -- Michael L. Schaecher <MichaelSchaecher@myangrytech.com>  Mon, 12 Jul 2021 11:52:09 -0600
+
+pihole-server-updater (2128.07-11.41) ubuntu; urgency=medium
+
+  * Updated manpage reflecting chages make in script.
+
+ -- Michael L. Schaecher <MichaelSchaecher@myangrytech.com>  Mon, 12 Jul 2021 11:43:58 -0600
+
+pihole-server-updater (2128.07-05.09) ubuntu; urgency=medium
+
+  * Variable placed on wrong line.
+  * Was using wrong variable.
+  * Allow for user to pick action.
+
+ -- Michael L. Schaecher <MichaelSchaecher@myangrytech.com>  Mon, 12 Jul 2021 05:13:22 -0600
+
+pihole-server-updater (21.10.07-08.31) ubuntu; urgency=medium
+
+  * Added uninstall option.
+  * Update packaging script to be less messy and making all variables global.
+
+ -- Michael L. Schaecher <MichaelSchaecher@myangrytech.com>  Sat, 10 Jul 2021 21:06:37 -0600
+
+pihole-server-updater (21.07.07-21.50) ubuntu; urgency=medium
+
+  * Updated README.
+
+ -- Michael L. Schaecher <MichaelSchaecher@myangrytech.com>  Thu, 08 Jul 2021 11:43:57 -0600
