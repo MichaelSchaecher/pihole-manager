@@ -1,5 +1,5 @@
 ---
-title:PIHOLE-MANAGER
+title: PIHOLE-MANAGER
 ---
 
 # ABOUT
