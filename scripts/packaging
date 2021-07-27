@@ -1,0 +1,121 @@
+#!/bin/bash
+
+# This script handles the job of build and/or installing the application. For the most part it is
+# very messy script that I am trying to clean up, unlike my house.
+
+function buildApplication () {
+
+	echo ${buildTree}
+
+	# Setup structure depending on how it's being built.
+	if test "${1}" = "package" ; then
+		packagingDeb="true"
+		mkdir -pv ${buildTree}/{${deb},${fil},${man},${doc},${lib},${bin}}
+		cp -vf tools/* ${buildTree}/${deb}/
+		chmod 0755 ${buildTree}/${deb}/*
+	elif test "${1}" = "build" ; then
+		mkdir -pv ${buildTree}/{${man},${doc},${lib},${bin}}
+	fi
+
+	if test "${newChangelog}" ; then
+		rm --verbose --force changelog 		# Remove the old changelog from the source tree.
+		echo "${newChangelog}" | tee changelog ${dirTree}/build/changelog ${buildTree}/${doc}/changelog > /dev/null
+	else
+		echo "${currentChangelog}" | tee changelog ${dirTree}/build/changelog ${buildTree}/${doc}/changelog > /dev/null
+	fi
+
+	gzip --best --force --verbose ${buildTree}/${doc}/changelog
+
+	sed "22iversion=\"${programVersion}\"" ${program} > ${buildTree}/${bin}/${programName}
+
+	cp --verbose --force COPYING ${buildTree}/${doc}/copyright
+	# Copy the systemctl services and general files.
+	cp --verbose --force ${services}/* ${buildTree}/${lib}/
+
+	pandoc ${manpage}/${programName}.1.md -s -t man -o ${buildTree}/${man}/${programName}.1
+	# Compress some files.
+	gzip --best --force --verbose ${buildTree}/${man}/${programName}.1
+
+	echo "${control}" | tee ${dirTree}/build/control > /dev/null
+
+	# Fix ownership and permissions
+	chown -R root:root "${buildTree}/"
+	chmod -R go-w "${buildTree}/"
+	# in case we are in a restrictive umask environment like 0077
+	chmod -R a+rX "${buildTree}/"
+	# Set permission for main script
+	chmod a+x "${buildTree}/${bin}/${programName}"
+
+	if test "${packagingDeb}" = "true" ; then
+
+		if dpkg-gencontrol -l"${dirTree}/build/changelog" -c"${dirTree}/build/control" \
+		   -p${programName} -P"${buildTree}" -f"${dirTree}/build/files" ; then
+			dpkg-deb --build ${buildTree} ..
+		fi
+
+	fi
+
+}
+
+# For some reason the script losses same of the variables, the only way to combat this is to set
+# each as a global variable. Though this only seems to happen with thoughts from inside a condition
+# or loop, I like symmetry which means all most be global.
+
+# Just in case the potion is lost do the full path.
+export dirTree="$(pwd)"
+export buildTree="${dirTree}/build/${programName}"
+
+# General source directory variables.
+export program="${dirTree}/src/pihole-manager"
+export services="${dirTree}/src/lib"
+export manpage="${dirTree}/data/man"
+
+export license="COPYING"
+
+# Control file for deb packaging.
+export control=$(cat <<EOF
+Source: ${programName}
+Section: networking
+Priority: optional
+Maintainer: ${DEBFULLNAME} <${DEBEMAIL}>
+Build-Depends: cp, gzip, wget, dpkg
+Homepage: https://www.github.com/mschaecher78/pihole-manager/
+
+Package:${programName}
+Architecture: all
+Depends: systemd, coreutils
+Description: Keep Pi-hole
+ up to date without having to manually check.
+EOF
+)
+
+# Grab the current changelog and compare the most resent change to the
+# last commit. If there is a difference then rebuild the changelog.
+export lastCommit="$(cat .git/COMMIT_EDITMSG)"
+export currentChangelog="$(cat changelog)"
+
+# Adjust the changelog if there are any commits or changes that need to be made.
+if ! echo "${currentChangelog}" | grep --no-ignore-case "${lastCommit}" > /dev/null ; then
+	export newChangelog=$(cat <<EOF
+${programName} (${programVersion}) ubuntu; urgency=medium
+
+  * ${lastCommit}
+
+ -- ${DEBFULLNAME} <${DEBEMAIL}>  $(date -R)
+
+${currentChangelog}
+EOF
+)
+fi
+
+case "${1}" in
+
+	package|build)
+		buildApplication "$@"
+	;;
+	install)
+	;;
+	uninstall)
+	;;
+
+esac

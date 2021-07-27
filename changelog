@@ -1,0 +1,8 @@
+pihole-manager (21.07-23-31) ubuntu; urgency=medium
+
+  * rewrote 'pihole-server-updater' and renamed to 'pihole-manager.'
+    - Removing to options of the main script as its only job is to
+      manage pihole.
+  * Added log management systemctl timer.
+
+ -- Michael L. Schaecher <MichaelSchaecher@myangrytech.com>  Mon, 26 Jul 2021 20:48:51 -0600

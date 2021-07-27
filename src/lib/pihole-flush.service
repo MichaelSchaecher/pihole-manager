@@ -1,0 +1,10 @@
+[Unit]
+Description=Flush Pihole log
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/pihole flush
+ExecStart=echo "(Pihole) log flushed - $(date -R)" >> /var/log/pihole-server.log
+
+[Install]
+WantedBy=multi-user.target
