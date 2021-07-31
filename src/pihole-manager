@@ -20,24 +20,6 @@ set -e
 
 name="pihole-manager"
 
-piholeVersion="/etc/pihole/piholeVersions"	# Store with the rest of the Pi-hole stuff.
-logFile="/var/log/pihole-manager.log"		# Log every this script does.
-
-# The following is pulled from Lorenzo Faleschini off of his post "A plugin for Pihole."
-# His idea works better and that it works more as a way to monitor for possible updates
-# By applying his idea to a systemd timer the script becomes more effective.
-pihole version > ${piholeVersion}
-
-# Get both the current and last versions.
-piholeCurrent="$(cat ${piholeVersion} | awk 'NR==1 {print}' | cut -d ' ' -f 6 | tr -d 'v:(:)')"
-piholeLatest="$(cat ${piholeVersion} | awk 'NR==1 {print}' | cut -d ' ' -f 8 | tr -d 'v:(:)')"
-
-adminLTECurrent="$(cat ${piholeVersion} | awk 'NR==2 {print}' | cut -d ' ' -f 6 | tr -d 'v:(:)')"
-adminLTELatest="$(cat ${piholeVersion} | awk 'NR==2 {print}' | cut -d ' ' -f 8 | tr -d 'v:(:)')"
-
-ftlCurrent="$(cat ${piholeVersion} | awk 'NR==3 {print}' | cut -d ' ' -f 6 | tr -d 'v:(:)')"
-ftlLatest="$(cat ${piholeVersion} | awk 'NR==3 {print}' | cut -d ' ' -f 8 | tr -d 'v:(:)')"
-
 # Basic info
 info=$(cat <<EOF
 ${Name} - version (${Version})
@@ -86,6 +68,24 @@ if test "${EUID}" -gt "0" ; then
 	fi
 
 elif test "${EUID}" -eq "0" ; then
+
+	piholeVersion="/etc/pihole/piholeVersions"	# Store with the rest of the Pi-hole stuff.
+	logFile="/var/log/pihole-manager.log"		# Log every this script does.
+
+	# The following is pulled from Lorenzo Faleschini off of his post "A plugin for Pihole."
+	# His idea works better and that it works more as a way to monitor for possible updates
+	# By applying his idea to a systemd timer the script becomes more effective.
+	pihole version > ${piholeVersion}
+
+	# Get both the current and last versions.
+	piholeCurrent="$(cat ${piholeVersion} | awk 'NR==1 {print}' | cut -d ' ' -f 6 | tr -d 'v:(:)')"
+	piholeLatest="$(cat ${piholeVersion} | awk 'NR==1 {print}' | cut -d ' ' -f 8 | tr -d 'v:(:)')"
+
+	adminLTECurrent="$(cat ${piholeVersion} | awk 'NR==2 {print}' | cut -d ' ' -f 6 | tr -d 'v:(:)')"
+	adminLTELatest="$(cat ${piholeVersion} | awk 'NR==2 {print}' | cut -d ' ' -f 8 | tr -d 'v:(:)')"
+
+	ftlCurrent="$(cat ${piholeVersion} | awk 'NR==3 {print}' | cut -d ' ' -f 6 | tr -d 'v:(:)')"
+	ftlLatest="$(cat ${piholeVersion} | awk 'NR==3 {print}' | cut -d ' ' -f 8 | tr -d 'v:(:)')"
 
 	# Pi-hole needs to be active and running for this scripts to work, so
 	# check. And if for some reason Pi-hole is not the try and restart.

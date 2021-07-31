@@ -1,3 +1,10 @@
+pihole-manager (21.209-30) ubuntu; urgency=medium
+
+  * Add option function to main script.
+  * Moved variables relating to pihole allowing options to run without root.
+
+ -- Michael L. Schaecher <MichaelSchaecher@myangrytech.com>  Fri, 30 Jul 2021 22:27:09 -0600
+
 pihole-manager (21.208-30) ubuntu; urgency=medium
 
   * Typo in README.
