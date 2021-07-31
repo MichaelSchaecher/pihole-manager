@@ -6,6 +6,3 @@ Type=oneshot
 ExecStart=/usr/local/bin/pihole flush
 ExecStart=/usr/local/bin/pihole arpflush
 ExecStart=echo "(Pihole) logs flushed - $(date -R)" >> /var/log/pihole-server.log
-
-[Install]
-WantedBy=multi-user.target
