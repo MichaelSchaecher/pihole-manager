@@ -20,6 +20,8 @@ set -e
 
 name="pihole-manager"
 
+logFile="/var/log/pihole-manager.log"		# Log every this script does.
+
 # Basic info
 info=$(cat <<EOF
 ${Name} - version (${Version})
@@ -28,7 +30,7 @@ EOF
 
 # The help and basic info.
 help=$(cat <<EOF
-${Info}
+${info}
 
 usage: ${Name} command
 
@@ -70,7 +72,6 @@ if test "${EUID}" -gt "0" ; then
 elif test "${EUID}" -eq "0" ; then
 
 	piholeVersion="/etc/pihole/piholeVersions"	# Store with the rest of the Pi-hole stuff.
-	logFile="/var/log/pihole-manager.log"		# Log every this script does.
 
 	# The following is pulled from Lorenzo Faleschini off of his post "A plugin for Pihole."
 	# His idea works better and that it works more as a way to monitor for possible updates
