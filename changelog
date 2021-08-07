@@ -1,6 +1,7 @@
 pihole-manager (21.214-31) ubuntu; urgency=medium
 
   * Simplified pihole version check making condition smaller.
+    - Moved version variables to just before the check.
 
  -- Michael L. Schaecher <MichaelSchaecher@myangrytech.com>  Mon, 02 Aug 2021 04:16:00 -0600
 

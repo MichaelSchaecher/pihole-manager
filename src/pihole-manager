@@ -21,7 +21,6 @@ set -e
 name="pihole-manager"
 
 logFile="/var/log/pihole-manager.log"		# Log every this script does.
-piholeVersion="/etc/pihole/piholeVersions"	# Store with the rest of the Pi-hole stuff.
 
 # Basic info
 info=$(cat <<EOF
@@ -51,21 +50,15 @@ EOF
 # Test if root and if not exit with error.
 if test "${EUID}" -gt "0" ; then
 
+	# Only relay message about root being required if no option command is given.
 	if test ! "${1}" ; then
-		echo "${name} ${version} requires root access!"
-		exit 1
+		echo "${name} ${version} requires root access!" && exit 1
 	else
 
 		case "${1}" in
-			--log|-l)
-				cat "${logFile}" | less
-			;;
-			--help|-h)
-				echo "${help}"
-			;;
-			--version|-v)
-				echo "${info}"
-			;;
+			--log|-l)	cat "${logFile}" | less ;;
+			--help|-h)	echo "${help}" ;;
+			--version|-v)	echo "${info}" ;;
 		esac
 
 	fi
@@ -75,33 +68,27 @@ elif test "${EUID}" -eq "0" ; then
 	# The following is pulled from Lorenzo Faleschini off of his post "A plugin for Pihole."
 	# His idea works better and that it works more as a way to monitor for possible updates
 	# By applying his idea to a systemd timer the script becomes more effective.
-	pihole version > ${piholeVersion}
 
-	# Get both the current and last versions.
-	piholeCurrent="$(cat ${piholeVersion} | awk 'NR==1 {print $4}' | tr -d 'v:\)'
-		cat ${piholeVersion} | awk 'NR=2 {print $4}' | tr -d 'v:\)'
-		cat ${piholeVersion} | awk 'NR==3 {print $4}' | tr -d 'v:\)')"
-
-	piholeLatest="$(cat ${piholeVersion} | awk 'NR==1 {print $6}' | tr -d 'v:\)'
-		cat ${piholeVersion} | awk 'NR==2 {print $6}' | tr -d 'v:\)'
-		cat ${piholeVersion} | awk 'NR==3 {print $6}' | tr -d 'v:\)')"
-
-	# Pi-hole needs to be active and running for this scripts to work, so
-	# check. And if for some reason Pi-hole is not the try and restart.
+	# Pi-hole needs to be active and running for this scripts to work.
 	if test "$(pihole status | grep 'Pihole blocking is disabled')" ; then
 		echo "(${name} Error) not enabled - $(date -R)" >> ${logFile}
-		pihole enable & sleep 5s
-		exit 1
+		pihole enable & sleep 5s && exit 1
 	else
 
+		# The DNS used by Pi-hole should be running; restart if it is not.
 		if test "$(pihole status | grep 'DNS service is NOT running')" ; then
 			echo "(${name} Error) not enabled - $(date -R)" >> ${logFile}
-			pihole enable & sleep 5s
-			exit 1
+			pihole enable & sleep 5s && exit 1
 		else
 
+			# Get both the current and last versions.
+			while read -r line ; do
+				current="${current} $(echo "$line" | awk '{print $4}' | tr -d 'v:)')"
+				latest="${latest} $(echo "$line" | awk '{print $6}' | tr -d 'v:)')"
+			done < <(pihole version)
+
 			# Pi-hole if installed with the web interface is divided into three parts
-			if test "${piholeCurrent}" != "${piholeLatest}" ; then
+			if test "${current}" != "${latest}" ; then
 				echo "(${name}) Updated - $(date -R)" >> ${logFile}
 				pihole updatePihole > /dev/null & sleep 90s && reboot
 			else
