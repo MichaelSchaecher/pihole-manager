@@ -16,26 +16,26 @@ function buildApplication () {
 	fi
 
 	if test "${newChangelog}" ; then
-		rm --verbose --force changelog 	&	# Remove the old changelog from the source tree.
+		rm --verbose --force changelog		# Remove the old changelog from the source tree.
 		echo "${newChangelog}" | tee changelog ${dirTree}/build/changelog ${buildTree}/${doc}/changelog > /dev/null
 	else
 		echo "${currentChangelog}" | tee changelog ${dirTree}/build/changelog ${buildTree}/${doc}/changelog > /dev/null
 	fi
 
 	# Copy first.
-	cp -vf tools/* ${buildTree}/${deb}/ & echo "${control}" | tee ${dirTree}/build/control > /dev/null
-	sed "22iversion=\"${programVersion}\"" ${program} > ${buildTree}/${bin}/${programName} &
-	cp --verbose --force COPYING ${buildTree}/${doc}/copyright &
+	cp -vf tools/* ${buildTree}/${deb}/ echo "${control}" | tee ${dirTree}/build/control > /dev/null
+	sed "22iversion=\"${programVersion}\"" ${program} > ${buildTree}/${bin}/${programName}
+	cp --verbose --force COPYING ${buildTree}/${doc}/copyright
 	# Copy the systemctl services and general files.
 	# Compress some files.
-	cp --verbose --force ${services}/* ${buildTree}/${lib}/ &
+	cp --verbose --force ${services}/* ${buildTree}/${lib}/
 	pandoc ${manpage}/${programName}.1.md -s -t man -o ${buildTree}/${man}/${programName}.1
 	# Compress the following.
-	gzip --best --force --verbose ${buildTree}/${doc}/changelog &
-	gzip --best --force --verbose ${buildTree}/${man}/${programName}.1 &
+	gzip --best --force --verbose ${buildTree}/${doc}/changelog
+	gzip --best --force --verbose ${buildTree}/${man}/${programName}.1
 	# Fix ownership and permissions and in case we are in a restrictive umask environment like 0077
-	chown -R root:root "${buildTree}/" ; chmod 0755 ${buildTree}/${deb}* &
-	chmod -R go-w "${buildTree}/" ; chmod -R a+rX "${buildTree}/" &
+	chown -R root:root "${buildTree}/" ; chmod 0755 ${buildTree}/${deb}*
+	chmod -R go-w "${buildTree}/" ; chmod -R a+rX "${buildTree}/"
 	# Set permission for main script
 	chmod a+x "${buildTree}/${bin}/${programName}"
 
@@ -107,6 +107,10 @@ case "${1}" in
 		buildApplication "$@"
 	;;
 	install)
+		sudo cp -f ${buildTree}/${bin}/${programName} /${bin}/${programName}
+		sudo cp -f ${buildTree}/${lib}/* /${lib}
+		sudo cp -f ${buildTree}/${doc}/changelog.* /${doc}/
+		sudo cp -f  ${buildTree}/${man}/${programName}.* /${man}/
 	;;
 	uninstall)
 	;;
