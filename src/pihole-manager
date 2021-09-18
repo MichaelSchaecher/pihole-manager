@@ -1,106 +1,191 @@
-#!/bin/bash
+#!/bin/env bash
 
-# pihole-manager helps to manage Pi-hole by keeping it update to date.
-# Copyright (C) 2021  Michael L. Schaecher
+# Copyright (c) 2021 Michael L. Schaecher
 
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
 
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
 
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+function __root_check () {
+
+	# Some commands require root access in order to function propertly. Only
+	# those that require well check for permissions.
+	echo "${EUID}" | awk -F: '$1 < 1 {print "root checks"}'
+
+}
+
+function __health_check () {
+
+	# Check if Pihole is up and running: If not enable, however exit with error.
+	# If Pihole is running normally do nothing.
+	if test "$(pihole status | grep 'Pihole blocking is disabled')" ||
+	   test "$(pihole status | grep 'DNS service is NOT running')"; then
+		echo "(${__name} Error) not enabled - $(date -R)" >> ${__logging}
+		pihole enable & sleep 5s && exit 1
+	fi
+
+}
+
+function __pihole_gravity () {
+
+	# Update the gravity and sleep at the sametime for 10s.
+	if pihole updateGravity > /dev/null & sleep 10s ; then
+		echo "(${__name}) Gravity Updated - $(date -R)" >> ${__logging}
+	fi
+
+}
+
+function __pihole_firmware () {
+
+	# Get both the current and last versions.
+	while read -r __line ; do
+		__current="${__current} $(echo "$__line" | awk '{print $4}' | tr -d 'v:)')"
+		__latest="${__latest} $(echo "$__line" | awk '{print $6}' | tr -d 'v:)')"
+	done < <(pihole version)
+
+	# If any part of pihole is out dated then update as a hole.
+	if test "${__current}" != "${__latest}" ; then
+
+		# Update and sleep for 90 seconds at the sametime.
+		if pihole updatePihole > /dev/null & sleep 90s ; then
+			echo "(${__name}) Updated - $(date -R)" >> ${__logging}
+			reboot
+		fi
+
+	# If Pihole is up-to-date, then simply log that it is.
+	elif test "${__current}" = "${__latest}" ; then
+		echo "(${__name}) Update to date - $(date -R)" >> ${__logging}
+	fi
+
+}
 
 set -e
 
-name="pihole-manager"
+__name="pihole-manager"
 
-logFile="/var/log/pihole-manager.log"		# Log every this script does.
+__logging="/var/log/pihole-manager.log"		# Log every this script does.
 
 # Basic info
-info=$(cat <<EOF
-${name} - version (${version})
+__info=$(cat <<EOF
+${__name} - version (${version})
 EOF
 )
 
 # The help and basic info.
-help=$(cat <<EOF
+__help=$(cat <<EOF
 ${info}
 
-usage: ${name} command
+usage: ${__name} command
+usage: ${__name} command <option>
 
 commands
 
-	--log, -l		View log file generator by pihole-manager.
+	update <option>		Update Pihole or just the Gravity.
 
-	--help, -h		Shows the messages.
+	clear			Clear Pihole logs.
 
-	--version, -v		Displays version info.
+	log			View log file generator by pihole-manager.
+
+	help			Shows the messages.
+
+	version			Displays version info.
+
+options
+	--gravity		Update Pihole gravity only.
+
+	--firmware		Update Pihole firmware.
+
+	--all			Update firmware and gravity.
 
 pihole-server-updater homepage: <https://www.github.com/mschaecher78/pihole-server-updater/>
-Copyright (C) 2021 <Michael L. Schaecher> GPL v3
+Copyright (C) 2021 <Michael L. Schaecher> MIT License
 EOF
 )
 
-# Test if root and if not exit with error.
-if test "${EUID}" -gt "0" ; then
+test ! -f ${__logging} && touch ${__logging}				# Create log file if it does not exit.
 
-	# Only relay message about root being required if no option command is given.
-	if test ! "${1}" ; then
-		echo "${name} ${version} requires root access!" && exit 1
-	else
+while true ; do case "${1}" in
+	flush)
+		! __root_check && exit 1				# Exit if fails.
+		__health_check && shift 1				# shift one space over if health check passes.
 
-		case "${1}" in
-			--log|-l)	cat "${logFile}" | less ;;
-			--help|-h)	echo "${help}" ;;
-			--version|-v)	echo "${info}" ;;
-		esac
-
-	fi
-
-elif test "${EUID}" -eq "0" ; then
-
-	# The following is pulled from Lorenzo Faleschini off of his post "A plugin for Pihole."
-	# His idea works better and that it works more as a way to monitor for possible updates
-	# By applying his idea to a systemd timer the script becomes more effective.
-
-	# Pi-hole needs to be active and running for this scripts to work.
-	if test "$(pihole status | grep 'Pihole blocking is disabled')" ; then
-		echo "(${name} Error) not enabled - $(date -R)" >> ${logFile}
-		pihole enable & sleep 5s && exit 1
-	else
-
-		# The DNS used by Pi-hole should be running; restart if it is not.
-		if test "$(pihole status | grep 'DNS service is NOT running')" ; then
-			echo "(${name} Error) not enabled - $(date -R)" >> ${logFile}
-			pihole enable & sleep 5s && exit 1
+		# If any one of the commands fail then error and exit dirty.
+		if pihole flush && pihole arpflush  ; then
+			echo "(Pihole) logs flushed             - $(date -R)" >> ${__logging}
+			break
 		else
-
-			# Get both the current and last versions.
-			while read -r line ; do
-				current="${current} $(echo "$line" | awk '{print $4}' | tr -d 'v:)')"
-				latest="${latest} $(echo "$line" | awk '{print $6}' | tr -d 'v:)')"
-			done < <(pihole version)
-
-			# Pi-hole if installed with the web interface is divided into three parts
-			if test "${current}" != "${latest}" ; then
-				echo "(${name}) Updated - $(date -R)" >> ${logFile}
-				pihole updatePihole > /dev/null & sleep 90s && reboot
-			else
-				# If there is nothing to updated, then update the Gravity.
-				pihole updateGravity > /dev/null & sleep 10s
-				echo "(${name}) Gravity Updated - $(date -R)" >> ${logFile}
-			fi
-
+			echo "(Pihole) Error: log flushed       - $(date -R)" >> ${__logging}
+			exit 1
 		fi
 
-	fi
+	;;
+	log)
+		cat "${__logging}" | less && break			# # Display log file using less command.
+	;;
+	help)
+		echo "${__help}" && break				# Helpful tips
+	;;
+	update)
+		! __root_check && exit 1				# Exit if fails.
+		__health_check && shift 1				# shift one space over if health check passes.
+	;;
+	version)	echo "${__info}" && break			# Display name and version info
+	;;
+	--gravity)
+		# The Pihole Gravity is really just a custom /etc/hosts file that redirects websites
+		# that are listed to "0.0.0.0" which is, in a way a blackhole. Causing everything listed
+		# to be sucked down into nothing.
+		if ! __pihole_gravity ; then
+			echo "(Pihole) Error: gravity update   - $(date -R)" >> ${__logging}
+			exit 1
+		fi
 
-fi
+		break
+	;;
+	--firmware)
+		# Lets just hope that this doesn't happen, but if the command does fail log and
+		# exit with error. Otherwise nothing to see here.
+		if ! __pihole_firmware ; then
+			echo "(Pihole) Error: firmware update  - $(date -R)" >> ${__logging}
+			exit 1
+		fi
+
+		 break
+	;;
+	--flush)
+	;;
+	--all)
+		# If the first command completes without a hitch then move on to the next command.
+		# Now if any one of the commands fail, exit with an error.
+		if ! __pihole_gravity ; then
+			echo "(Pihole) Error: gravity update - $(date -R)" >> ${__logging}
+			exit 1
+		else
+			if ! __pihole_firmware ; then
+				echo "(Pihole) Error: firmware update - $(date -R)" >> ${__logging}
+				exit 1
+			fi
+		fi
+
+		break
+	;;
+	*)
+		echo "${__name} invalid command or option!" && exit 1	# Exit if ivalid command/option
+	;;
+esac done
 
 exit 0

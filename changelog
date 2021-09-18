@@ -1,5 +1,11 @@
 pihole-manager (21.214-31) ubuntu; urgency=medium
 
+  * Moved tools/postinst script to src/init/postinst.
+
+ -- Michael L. Schaecher <mschaecher78@gmail.com>  Fri, 17 Sep 2021 09:54:27 -0600
+
+pihole-manager (21.214-31) ubuntu; urgency=medium
+
   * Simplified pihole version check making condition smaller.
     - Moved version variables to just before the check.
 
