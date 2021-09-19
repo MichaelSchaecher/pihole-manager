@@ -12,3 +12,9 @@ What **PIHOLE MANAGER** does to simple: it checks that **Pi-hole** is running an
 - Check for application updates.
 - Updates Gravity.
 - Flush logs and network table.
+
+## Buildong and Installing Debian package.
+Building as a deb package ```fakeroot ./setup debian```. To install the package first copy over to the **Pi** then run the following command: ```sudo dpkg -i <package>```.
+
+## General Building and Installing
+Building without packaging the Debian way just run ```fakeroot ./setup build```, or just run ```sudo ./setup install```.
