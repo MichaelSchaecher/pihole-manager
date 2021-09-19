@@ -1,0 +1,6 @@
+[Unit]
+Description=Flush Pihole log
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/pihole-manager clear

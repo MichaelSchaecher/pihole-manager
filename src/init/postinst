@@ -7,14 +7,17 @@ set -e
 case "${1}" in
 	configure)
 
-		if which systemctl >/dev/null 2>&1 ; then
-			systemctl enable --now pihole-manager.timer pihole-flush.timer ||
-			true && systemctl daemon-reload
+		! which pihole &> /dev/null && ( echo "error: pihole firmware is missing" & exit 1 )
 
-			if which pihole-server-update >/dev/null 2>&1 ; then
+		if which systemctl &> /dev/null ; then
+			systemctl is-enabled pihole-manager pihole-flush &&
+				systemctl disable --now pihole-manager.timer pihole-flush.timer
+
+			systemctl enable --now pihole-update-gravity.timer pihole-log-flush.timer \
+				pihole-update-firmware.timer || true && systemctl daemon-reload
+
+			which pihole-server-updater &> /dev/null &&
 				echo "please run 'apt purge pihole-server-updater'"
-			fi
-
 		fi
 
 	;;

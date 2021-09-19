@@ -1,0 +1,11 @@
+[Unit]
+Description=Flush Pihole log
+
+[Timer]
+Unit=pihole-log-flush.service
+OnCalendar=Sun 10:00
+RandomizedDelaySec=10m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

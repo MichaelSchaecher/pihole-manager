@@ -2,8 +2,8 @@
 Description=Manage PI-hole by updating both the program and Gravity
 
 [Timer]
-Unit=pihole-manager.service
-OnCalendar=*-*-* 20:45
+Unit=pihole-update-gravity.service
+OnCalendar=*-*-* 04:15
 RandomizedDelaySec=10m
 Persistent=true
 

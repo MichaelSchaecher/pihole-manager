@@ -1,0 +1,11 @@
+[Unit]
+Description=Manage PI-hole by updating both the program and Gravity
+
+[Timer]
+Unit=pihole-update-firmware.service
+OnCalendar=*-*-* 04:45
+RandomizedDelaySec=10m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -3,4 +3,4 @@ Description=Manage PI-hole by updating both the program and Gravity
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/pihole-manager
+ExecStart=/usr/local/bin/pihole-manager update --gravity

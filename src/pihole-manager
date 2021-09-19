@@ -24,7 +24,7 @@ function __root_check () {
 
 	# Some commands require root access in order to function propertly. Only
 	# those that require well check for permissions.
-	echo "${EUID}" | awk -F: '$1 < 1 {print "root checks"}'
+	! test "${EUID}" -eq "0" && echo "root premission required!" && exit 1
 
 }
 
