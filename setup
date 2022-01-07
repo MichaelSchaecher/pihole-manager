@@ -1,89 +1,34 @@
 #!/bin/env bash
 
-# This used to be handled by both a Makefile and bash script, but after some think come
-# to a realize that a simple one single bash script.
-
-function debian () {
-
-	build && :					# Most of the build is general.
-
-	# Exit build if changelog subfunction fails
-	! __rebuild_changelog && ( echo "ERROR: unable to copy ${__tee_changelog}" &
-		exit 1 )
-
-	# dpkg need control file, or it just needs control.
-	if ! echo "${__control}" | tee build/control  &> /dev/null ; then
-		echo "ERROR: cannot create ${__build}/control" & exit 1
-	fi
-
-	if cp -vf ${__src_init} ${__postinst} ; then
-		fakeroot chmod 0755 ${__postinst} ||
-		( echo "ERROR: applying premissions to ${__build}/${__deb}" &
-		exit 1 )
-	fi
-
-	dpkg-gencontrol -l"build/changelog" -c"build/control" \
-		-p${__name} -P"${__build}" -f"build/files" && dpkg-deb --build ${__build} ..
-
-}
-
-function build () {
-
-	# If creating directory fails then exit with error.
-	if ! mkdir -pv ${__build}/{${__bin},${__deb},${__doc},${__man},${__lib}} ; then
-		echo "ERROR: fail to create build directory " & exit 1
-	fi
-
-	# The pointless version code can change, because of this the source script doesn't have the version code set.
-	if ! sed "79i__version=\"${__version}\"" ${__program} > ${__bin_program} ; then
-		echo "ERROR: unable to set ${__name} version" & exit 1
-	fi
-
-	# Copy the license.
-	! cp -vf COPYING ${__build}/${__doc}/copyright && exit 1
-
-	# Systemctl service scripts.
-	! cp -vf ${__service} ${__lib_service}/ && exit 1
-
-	# Build the manpage, only throwing error if something goes wrong.
-	if pandoc ${__manpage} -s -t man -o ${__pandoc_man} ; then
-		gzip -9 -fv ${__pandoc_man} && :
-	fi
-
-	chown -R root:root "${__build}/" && :
-	( chmod -R go-w "${__build}/" & chmod -R a+rX "${__build}/" ) && :
-	chmod a+x "${__bin_program}" && :
-
-}
-
 function install () {
-
-	# Check for root.
-	! test "${EUID}" -eq "0" && echo "root premission required!" && exit 1
-
-	# Only if pihole is installed.
-	if ! which pihole &> /dev/null ; then
-		echo "ERROR: pihole firmware not installed!" ; exit 1
+	# Because of what is installed, user with root premissions is required.
+	if test "$(id -u)" -gt "0" ; then
+		echo "Must have root premission to setup pihole-manager"
+		exit
+	else
+		# Check if pihole is installed and if not give link to how-to-guide.
+		if ! which pihole &> /dev/null ; then
+			echo "Please install pihole"
+			echo "Visit https://docs.pi-hole.net/main/basic-install/ to learn how."
+			exit 126
+		fi
 	fi
 
-	! test -d build && build					# If the build directory doesn't exist.
+	sed "79i__version=\"${__version}\"" src/$program_name > /usr/local/bin/$program_name
 
-	cp -vf ${__bin_program} /${__bin}/${__name} && cp -vf ${__lib_service}/* \
-	${__lib}/ && cp -vf ${__pandoc_man}.gz ${__man}/${__name}1.gz && cp -rvf \
-	${__build}/${__doc} /${__doc} || exit 1
+	cp -vf data/man/$program_name.1.gz /usr/share/man/man1/
+	cp -vf src/lib/* /lib/systemd/system/
 
 	# Enable timers.
 	if which systemctl &> /dev/null ; then
-		systemctl is-enabled pihole-manager pihole-flush &&
-		systemctl disable --now pihole-manager.timer pihole-flush.timer
+		# Disable old pihole-manager systemctl scripts.
+		if systemctl is-enabled pihole-manager pihole-flush ; then
+			systemctl disable --now pihole-manager.timer pihole-flush.timer
+		fi
 
 		systemctl enable --now pihole-update-gravity.timer pihole-log-flush.timer \
 			pihole-update-firmware.timer || true && systemctl daemon-reload
-
-		which pihole-server-updater &> /dev/null &&
-			echo "error: please uninstall pihole-server-updater"
 	fi
-
 }
 
 function uninstall () {
@@ -102,89 +47,12 @@ function uninstall () {
 	test -f ${__broken_firmware} || test -f ${__broken_gravity} || test -f ${__broken_flush} &&
 		rm ${__broken_firmware} ${__broken_gravity} ${__broken_flush} || exit 1
 
-	cp -vf ${__bin_program} /${__bin}/${__name} && cp -vf ${__lib_service}/* \
-	${__lib}/ && cp -vf ${__pandoc_man}.gz ${__man}/${__name}1.gz && cp -rvf \
-	${__build}/${__doc} /${__doc} || exit 1
-
+	rm -vf /usr/local/bin/$program_name
+	rm -vf /lib/systemd/system/pihole-update* /lib/systemd/system/pihole-log*
 }
 
-__rebuild_changelog () {
-
-	# Check the to variable for the changelog is not empty.
-	if test -n "${__changelog}" ; then
-
-		# Populate the environment with the new changelog
-		if ( echo "${__changelog}" | tee ${__tee_changelog} ) &> /dev/null ; then
-			# Compress the changelog for the build using gzip.
-			gzip -9 -fv ${__build}/${__doc}/changelog && :
-		fi
-
-	fi
-
-}
-
-__name="pihole-manager"							# Set program name
-__version="$(cat version)"						# Set pointless version code.
-
-__build="build/${__name}"						# Build directory.
-
-__bin="usr/local/bin"							# Program location.
-__deb="DEBIAN"								# Debian package control directory.
-__doc="usr/share/doc/${__name}"						# Location for program documents.
-__man="usr/share/man/man1"						# Location for manpage.
-__lib="lib/systemd/system"						# Location for systemd/systemctl service scripts.
-
-__postinst="${__build}/${__deb}/postinst"				# Debian postinst.
-__pandoc_man="${__build}/${__man}/${__name}.1"				# Pressed manpage for pihole=manager.
-__bin_program="${__build}/${__bin}/${__name}"				# main program.
-__lib_service="${__build}/${__lib}"
-
-__program="src/pihole-manager"						# Source pihole-manager script.
-__manpage="data/man/${__name}.1.md"					# Markdown manpage.
-__src_init="src/init/postinst"						# Postinstall script for deb package.
-__service="src/lib/*"
-
-__last_commit="$(cat .git/COMMIT_EDITMSG)"  &> /dev/null		# Get current or last commit.
-
-# variable used to rebuild changelog.
-__tee_changelog="changelog build/changelog ${__build}/${__doc}/changelog"
-
-# Control file for deb packaging.
-__control=$(cat <<EOF
-Source: ${__name}
-Section: networking
-Priority: optional
-Maintainer: ${DEBFULLNAME} <${DEBEMAIL}>
-Build-Depends: cp, gzip, wget, dpkg
-Homepage: https://www.github.com/mschaecher78/pihole-manager/
-
-Package:${__name}
-Architecture: all
-Depends: systemd, coreutils
-Description: Keep Pihole
- up to date without having to manually check.
-EOF
-)
-__changelog="$(cat changelog)"	&> /dev/null				# Grab the current changelog.
-__new_changelog=$(cat <<EOF
-${__name} (${__version}) ubuntu; urgency=medium
-
-  * ${__last_commit}
-
- -- ${DEBFULLNAME} <${DEBEMAIL}>  $(date -R)
-
-${__changelog}
-EOF
-)
-
-# Adjust the changelog if there are any commits or changes that need to be made.
-if ! ( echo "${__changelog}" | grep --no-ignore-case "${__last_commit}" &> /dev/null ) ; then
-	export __changelog="${__new_changelog}"
-else
-	export __changelog="${__changelog}"
-fi
-
-test -d "${__build}" && rm -rf build					# Remove build directory if it exists.
+program_name="pihole-manager"						# Set program name
+__version="$(cat version)"					# Set pointless version code.
 
 # Run function.
 "$@"

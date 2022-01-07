@@ -1,11 +1,7 @@
----
-title: PIHOLE-MANAGER
----
-
 # ABOUT
-**Pi-hole** is a great little application that allows for network add blocking and Internet filtering, but it lacks management. This is the goal for **PIHOLE MANAGER**, to manage on the backend.
+**Pihole Manager** came about as I needed away to manage the **[Pi-hole](https://pi-hole.net/)** without me have to always login or ssh into the server. Most of the time is was just to update the _gravity_ or update the application.
 
-What **PIHOLE MANAGER** does to simple: it checks that **Pi-hole** is running and enabled, checks for updates, updates the Gravity (the black-hole the adds are sucked into) and flushes the logs. All without the need for the user/admin to manual apply changes. everything is handled for your and logged.
+With **Pihole Manager** 90 precent of what I use to have to do is taken care for me.
 
 ## Features
 - Checks that Pi-hole and Pi-hole DNS is enabled.
@@ -13,8 +9,16 @@ What **PIHOLE MANAGER** does to simple: it checks that **Pi-hole** is running an
 - Updates Gravity.
 - Flush logs and network table.
 
-## Buildong and Installing Debian package.
-Building as a deb package ```fakeroot ./setup debian```. To install the package first copy over to the **Pi** then run the following command: ```sudo dpkg -i <package>```.
+## Installing
 
-## General Building and Installing
-Building without packaging the Debian way just run ```fakeroot ./setup build```, or just run ```sudo ./setup install```.
+```bash
+sudo ./setup install
+```
+
+## Uninstalling
+
+If for whatever reason you need to uninstall **Pihole Manager** run the following.
+
+```bash
+sudo ./ uninstall
+```
