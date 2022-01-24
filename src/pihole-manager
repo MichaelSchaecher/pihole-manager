@@ -21,15 +21,14 @@
 # SOFTWARE.
 
 function __root_check () {
-
 	# Some commands require root access in order to function propertly. Only
 	# those that require well check for permissions.
-	! test "$(id -u)" -eq "0" && echo "root premission required!" && exit 1
-
+	if test "$(id -u)" -gt "0" ; then
+		echo "root premission required!" && exit 1
+	fi
 }
 
 function __health_check () {
-
 	# Check if Pihole is up and running: If not enable, however exit with error.
 	# If Pihole is running normally do nothing.
 	if test "$(pihole status | grep 'Pihole blocking is disabled')" ||
@@ -37,16 +36,16 @@ function __health_check () {
 		echo "(${program_name} Error) not enabled - $(date -R)" >> ${log_out}
 		pihole enable & sleep 5s && exit 1
 	fi
-
 }
 
 function __pihole_gravity () {
-
 	# Update the gravity and sleep at the sametime for 10s.
 	if pihole updateGravity > /dev/null & sleep 10s ; then
-		echo "(${program_name}) Gravity Updated - $(date -R)" >> ${log_out}
+		echo "(${program_name}) Updated Gravity - $(date -R)" >> ${log_out}
+	else
+		echo "(${program_name}) Error: Update Gravity - $(date -R)" >> ${log_out}
+		exit 1
 	fi
-
 }
 
 function __pihole_firmware () {
@@ -57,6 +56,8 @@ function __pihole_firmware () {
 		__latest="${__latest} $(echo "$__line" | awk '{print $6}' | tr -d 'v:)')"
 	done < <(pihole version)
 
+	echo $__current $__latest
+
 	# If any part of pihole is out dated then update as a hole.
 	if test "${__current}" != "${__latest}" ; then
 
@@ -64,6 +65,9 @@ function __pihole_firmware () {
 		if pihole updatePihole > /dev/null & sleep 90s ; then
 			echo "(${program_name}) Updated - $(date -R)" >> ${log_out}
 			reboot
+		else
+			echo "(${program_name}) Error: Firmware Update - $(date -R)" >> ${log_out}
+			exit 1
 		fi
 
 	# If Pihole is up-to-date, then simply log that it is.
@@ -119,9 +123,8 @@ EOF
 test ! -f ${log_out} && touch ${log_out}			# Create log file if it does not exit.
 
 while true ; do case "${1}" in
-	flush)
-		! __root_check && exit 1			# Exit if fails.
-		__health_check && shift 1			# shift one space over if health check passes.
+	flush		)
+		__root_check ; __health_check ; shift 1
 
 		# If any one of the commands fail then error and exit dirty.
 		if pihole flush && pihole arpflush  ; then
@@ -133,58 +136,32 @@ while true ; do case "${1}" in
 		fi
 
 	;;
-	log)
+	log		)
 		cat "${log_out}" | less && break		# # Display log file using less command.
 	;;
-	help)
+	help		)
 		echo "${usage}" && break			# Helpful tips
 	;;
-	update)
-		! __root_check && exit 1			# Exit if fails.
-		__health_check && shift 1			# shift one space over if health check passes.
+	update		)
+		__root_check ; __health_check ; shift 1
 	;;
-	version)
-		echo "${about}" && break			# Display name and version info
+	version		)
+		echo "${about}" && break			# Display name and version info.
 	;;
-	--gravity)
-		# The Pihole Gravity is really just a custom /etc/hosts file that redirects websites
-		# that are listed to "0.0.0.0" which is, in a way a blackhole. Causing everything listed
-		# to be sucked down into nothing.
-		if ! __pihole_gravity ; then
-			echo "(Pihole) Error: gravity update   - $(date -R)" >> ${log_out}
-			exit 1
-		fi
-
-		break
+	--gravity	)
+		__pihole_gravity ; break			# Run function _pihole_gravity.
 	;;
-	--firmware)
-		# Lets just hope that this doesn't happen, but if the command does fail log and
-		# exit with error. Otherwise nothing to see here.
-		if ! __pihole_firmware ; then
-			echo "(Pihole) Error: firmware update  - $(date -R)" >> ${log_out}
-			exit 1
-		fi
-
-		 break
+	--firmware	)
+		__pihole_firmware ; break			# Run function _pihole_firmware.
 	;;
-	--flush)
+	--flush		)
 	;;
-	--all)
-		# If the first command completes without a hitch then move on to the next command.
-		# Now if any one of the commands fail, exit with an error.
-		if ! __pihole_gravity ; then
-			echo "(Pihole) Error: gravity update - $(date -R)" >> ${log_out}
-			exit 1
-		else
-			if ! __pihole_firmware ; then
-				echo "(Pihole) Error: firmware update - $(date -R)" >> ${log_out}
-				exit 1
-			fi
-		fi
-
-		break
+	--all		)
+		# Run all functions relating to keeping Pihole update-to-date. This is the only
+		# option that is run manually and not by SystemD.
+		__pihole_gravity ; __pihole_firmware ; break
 	;;
-	*)
+	*		)
 		echo "${program_name} invalid command or option!" && exit 1	# Exit if ivalid command/option
 	;;
 esac done

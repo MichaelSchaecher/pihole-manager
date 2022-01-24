@@ -14,10 +14,10 @@ function install () {
 		fi
 	fi
 
-	sed "79i__version=\"${__version}\"" src/$program_name > /usr/local/bin/$program_name
+	sed "83i__version=\"${__version}\"" src/$program_name > /usr/local/bin/$program_name
 
-	cp -vf data/man/$program_name.1.gz /usr/share/man/man1/
-	cp -vf src/lib/* /lib/systemd/system/
+	cp -vpf data/man/$program_name.1.gz /usr/share/man/man1/
+	cp -vpf src/lib/* /lib/systemd/system/
 
 	# Enable timers.
 	if which systemctl &> /dev/null ; then
