@@ -81,7 +81,7 @@ set -e
 
 program_name="pihole-manager"
 
-log_out="/var/log/pihole-manager.log"		# Log every this script does.
+log_out="/var/log/$program_name/$program_name.log"	# Log every this script does.
 
 # Basic info
 about=$(cat <<EOF
