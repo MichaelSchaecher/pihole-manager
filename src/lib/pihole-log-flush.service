@@ -3,4 +3,4 @@ Description=Flush Pihole log
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/pihole-manager clear
+ExecStart=/usr/local/bin/pihole-manager flush

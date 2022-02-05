@@ -100,7 +100,7 @@ commands
 
 	update <option>		Update Pihole or just the Gravity.
 
-	clear			Clear Pihole logs.
+	flush			Clear Pihole logs.
 
 	log			View log file generator by pihole-manager.
 
