@@ -1,5 +1,5 @@
 [Unit]
-Description=Manage PI-hole by updating both the program and Gravity
+Description=Manage PI-hole by updating the gravity
 
 [Service]
 Type=oneshot

@@ -1,6 +1,6 @@
 [Unit]
-Description=Manage PI-hole by updating both the program and Gravity
+Description=Manage PI-hole by updating firmware
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/pihole-manager update --gravity
+ExecStart=/usr/local/bin/pihole-manager update --firmware
