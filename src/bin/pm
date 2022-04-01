@@ -1,0 +1,175 @@
+#!/bin/env bash
+
+# Copyright (c) 2021 by Michael L. Schaecher under the MIT License all rights reserved.
+
+# Pihole Manager or "pm" for short is a simple utility for maintaining Pihole, making sure that you network
+# DNS filter is always up-to-date. Most of this script runs in the background as a systemd timer service.
+
+function errorMessage () {
+
+        # Show an error if something goes wrong.
+        echo "${progName}:" "${@}" 1>&2 ; exit ${2}
+
+}
+
+function updateFirmware () {
+
+        # Compare the current version and lastest.
+	while read -r line ; do
+		currentVersion="${currentVersion} $(echo "${line}" | awk '{print $4}' | tr -d 'v:)')"
+		latestVersion="${latestVersion} $(echo "${line}" | awk '{print $6}' | tr -d 'v:)')"
+	done < <(pihole version)
+
+        # Update firmware if needed.
+        if test "${currentVersion}" != "${lastestVersion}" ; then
+
+		# Update and sleep for 90 seconds at the sametime.
+		if pihole updatePihole > /dev/null & sleep 90s ; then
+			echo "(${progName}) pihole firmware updated - $(date -R)" >> ${logFile}
+		else
+			echo "(${progName}) Error: pihole firmware update failed - $(date -R)" >> ${logFile}
+			errorMessage "pihole firmware update failed!" ${LINENO}
+		fi
+
+        elif test "${currentVersion}" = "${lastestVersion}" ; then
+		echo "(${progName}) pihole firmware up-to-date - $(date -R)" >> ${logFile}
+        fi
+
+        test "${doReboot}" = "true" && reboot                   # Reboot system if true.
+
+}
+
+function updateGravity () {
+
+	# Update the gravity and sleep at the sametime for 10s.
+	if pihole updateGravity > /dev/null & sleep 10s ; then
+		echo "(${progName}) pihole gravity updated - $(date -R)" >> ${logFile}
+	else
+		echo "(${progName}) Error: Update Gravity - $(date -R)" >> ${logFile}
+		errorMessage "pihole gravity update failed!" ${LINENO}
+	fi
+
+        test "${doReboot}" = "true" && reboot                   # Reboot system if true.
+
+}
+
+set -eo pipefail                                                # Track pipped commands and errors.
+
+progName="pm"                                                   # Short for (Pihole Manager)
+progVersion="22-03.31"
+
+logFile="/var/log/pihole-manager.log"                           # Log file for 'pm.'
+
+# Version info.
+versionInfo="$(cat <<EOF
+${progName} - v${progVersion}
+EOF
+)"
+
+# Help info
+helpInfo="$(cat <<EOF
+${versionInfo}
+
+Usage: ${progName} command
+Usage: ${progName} command [flag] <option>
+
+Command
+        maint                   Maintain what is required for Pihole to function.
+
+        version                 Show version
+
+        help                    Displays the help dialog.
+
+Flag
+        --firmware              Check and update the firmware for Pihole.
+
+        --gravity               Update the DNS sinkhole for Pihole.
+
+        --log                   Maintain the logs for Pihole.
+
+option
+        -c,--clear              Clear the logs if used with '--log' flag.
+
+        -h,--health             Check the health of Pihole before updating.
+
+        -s,--show               Show the log for pm (Pihole Manager).
+
+        -r,--reboot             Reboot system after update.
+
+pm homepage: <https://www.github.com/mschaecher78/pm/>
+Copyright (C) 2021 <Michael L. Schaecher> MIT License
+EOF
+)"
+
+declare -a commandArray=( "maint" "version" "help" )            # Command list passed into an array.
+
+declare -a flagArray=( "--firmware" "--gravity" "--log" )       # flag list passed into an array.
+
+declare -a optionLogArray=( "-c" "--clear" "-s" "--show" )      # Options for '--log' flag.
+
+declare -a optionArray=( "-h" "--health" "-r" "--reboot" )      # Options for firmware and gravity.
+
+test ! -f "${logFile}" && touch ${logFile}                      # Check for the existence of the log file.
+
+# A command is required for Pihole Manager to be able function.
+[[ ! " ${commandArray[*]} " =~ " ${1} " ]] &&
+errorMessage "looking for flag, run \`pm help\` for details! line" ${LINENO}
+
+while true ; do case "${1}" in
+        "maint"                         )
+
+                # Check for root permissions.
+                test "$(id -u)" -gt "0" &&
+                errorMessage "root premissions is required" ${LINENO}
+
+                # A flag is required, error if none is present.
+                [[ ! " ${flagArray[*]} " =~ " ${2} " ]] &&
+                errorMessage "flag required, run \`pm help\` for details! line" ${LINENO}
+
+        ;;
+        "version"                       ) echo -e "${versionInfo}" ; break ;;
+        "help"                          ) echo -e "${helpInfo}" ; break ;;
+        "--firmware"|"--gravity"        )
+
+                test "${1}" = "--firmware" && runFunction="updateFirmware"
+
+                test "${1}" = "--gravity" && runFunction="updateGravity"
+
+                [[ ! " ${optionArray[*]} " =~ " ${2} " ]] &&
+                errorMessage "option ${2} not allowed, run \`pm help\` for details! line" ${LINENO}
+
+        ;;
+        "--log"                 )
+
+                runFunction="editLogs"
+
+                [[ ! " ${optionLogArray[*]} " =~ " ${2} " ]] &&
+                errorMessage "option ${2} not allowed, run \`pm help\` for details! line" ${LINENO}
+
+        ;;
+        "-h"|"--health"         )
+
+                # Check the health of Pihole.
+                if ( pihole status | grep -q "is disabled" ) ||
+                   ( pihole status | grep -q "NOT running" ) ; then
+                        echo "(${progName} Error): not enabled - $(date -R)" >> ${logFile}
+                        pihole enable && pihole restartdns ||
+                        errorMessage "unable to pihole" ${LINENO}
+                fi
+
+        ;;
+        "-r"|"--reboot"         ) doReboot="true" ;;
+        "-c"|"--clear"          )
+
+                # The only flag is
+                if test "${doFunction}" = "updateFirmware" ||
+                   test "${doFunction}" = "updateGravity" ; then
+                        errorMessage "-c|--clear option not allowed!" ${LINENO}
+                fi
+
+        ;;
+esac ; shift ; test -z "${1}" && break ; done
+
+${runFunction}                                                  # Run the function.
+
+exit 0                                                          # Exit if nothing else.
